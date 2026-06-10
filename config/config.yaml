@@ -1,0 +1,7 @@
+wrf_version: "4.4.1"
+toolchain: "foss-2022b"
+parallel_type: "dmpar"
+
+# Ruta base donde tu EasyBuild / Clúster instala los módulos de software
+# Generalmente es algo como /apps/easybuild/software o ~/.local/easybuild/software
+eb_software_root: "/home/usuario/.local/easybuild/software"

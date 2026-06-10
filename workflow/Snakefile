@@ -1,0 +1,92 @@
+import os
+
+configfile: "config/config.yaml"
+
+VERSION = config["wrf_version"]
+TOOLCHAIN = config["toolchain"]
+PARALLEL = config["parallel_type"]
+
+WRF_INSTALL_DIR = f"{config['eb_software_root']}/WRF/{VERSION}-{TOOLCHAIN}-{PARALLEL}"
+WRF_SRC_DIR = f"{WRF_INSTALL_DIR}/WRF-{VERSION}"
+
+rule all:
+    input:
+        f"logs/installation_WRF_{VERSION}.done"
+
+# -----------------------------------------------------------------------------
+# PHASE 1: Source Code Acquisition
+# -----------------------------------------------------------------------------
+rule wrf_source_checkpoint:
+    """Verifies that the source code is available in the directory."""
+    output:
+        # The 'configure' script is the indicator that the base code is ready
+        config_script = os.path.join(WRF_SRC_DIR, "configure")
+    log:
+        "logs/wrf_phase1_fetch.log"
+    shell:
+        """
+        # HPC command to download/extract the source code
+        eb WRF-{VERSION}-{TOOLCHAIN}-{PARALLEL}.eb --robot --stop=fetch > {log} 2>&1
+        """
+
+# -----------------------------------------------------------------------------
+# PHASE 2: Environment Configuration for Compilation
+# -----------------------------------------------------------------------------
+rule wrf_configure_checkpoint:
+    """Monitors the creation of the compilation directives of WRF."""
+    input:
+        config_script = os.path.join(WRF_SRC_DIR, "configure")
+    output:
+        # File that generates WRF strictly upon completion of ./configure
+        make_config = os.path.join(WRF_SRC_DIR, "configure.wrf")
+    log:
+        "logs/wrf_phase2_configure.log"
+    shell:
+        """
+        # Avanza el instalador hasta generar la configuración del Makefile
+        eb WRF-{VERSION}-{TOOLCHAIN}-{PARALLEL}.eb --robot --stop=configure > {log} 2>&1
+        """
+
+# -----------------------------------------------------------------------------
+# PHASE 3: Core libraries compilation
+# -----------------------------------------------------------------------------
+rule wrf_core_libraries_checkpoint:
+    """Monitors the compilation of the base framework and numeric cores."""
+    input:
+        make_config = os.path.join(WRF_SRC_DIR, "configure.wrf")
+    output:
+        # Static intermediate library generated before the executables
+        main_lib = os.path.join(WRF_SRC_DIR, "main", "libwrflib.a")
+    log:
+        "logs/wrf_phase3_build_core.log"
+    threads: 16  # Reserve these cores in Slurm for the compilation step
+    shell:
+        """
+        # Launch the heavy compilation of the core libraries of WRF
+        eb WRF-{VERSION}-{TOOLCHAIN}-{PARALLEL}.eb --robot --stop=build > {log} 2>&1
+        """
+
+# -----------------------------------------------------------------------------
+# PHASE 4: Generation of Executables and Finalization
+# -----------------------------------------------------------------------------
+rule wrf_finalize_installation:
+    """Validates the simulation executables and installs the final module."""
+    input:
+        main_lib = os.path.join(WRF_SRC_DIR, "main", "libwrflib.a")
+    output:
+        # The 4 critical binaries that guarantee the success of the WRF compilation
+        wrf_exe = os.path.join(WRF_SRC_DIR, "main", "wrf.exe"),
+        real_exe = os.path.join(WRF_SRC_DIR, "main", "real.exe"),
+        ndown_exe = os.path.join(WRF_SRC_DIR, "main", "ndown.exe"),
+        tc_exe = os.path.join(WRF_SRC_DIR, "main", "tc.exe"),
+        final_flag = f"logs/installation_WRF_{VERSION}.done"
+    log:
+        "logs/wrf_phase4_final.log"
+    shell:
+        """
+        # Final execution of EasyBuild (will complete the installation and sanity checks)
+        eb WRF-{VERSION}-{TOOLCHAIN}-{PARALLEL}.eb --robot > {log} 2>&1
+        
+        # Final flag file for the pipeline
+        touch {output.final_flag}
+        """
