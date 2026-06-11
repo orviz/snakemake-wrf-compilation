@@ -1,0 +1,25 @@
+[workspace]
+name = "snakemake-wrf-compilation"
+version = "0.1.0"
+description = "Workflow that tackles WRF installation using Snakemake and EasyBuild"
+authors = ["Pablo Orviz <orviz@ifca.es>"]
+channels = ["conda-forge", "bioconda"] # Specific channels for HPC
+platforms = ["linux-64"]
+
+[dependencies]
+python = ">=3.10"
+conda = "*"
+
+# --- SnakeMake ecosystem 8+ ---
+snakemake = ">=8.0"
+snakemake-executor-plugin-slurm = "*"
+
+# --- EasyBuild ecosystem compatible with Python 3 ---
+easybuild-framework = ">=4.9"
+easybuild-easyblocks = "*"
+easybuild-easyconfigs = "*"
+
+[tasks]
+dry-run = "snakemake --profile config/profiles/slurm_cluster --dry-run"
+run-slurm = "snakemake --profile config/profiles/slurm_cluster"
+run-local = "snakemake"

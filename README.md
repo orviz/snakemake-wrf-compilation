@@ -34,35 +34,66 @@ wrf-installation-pipeline/
 
 ## Quick Start
 
-### 1. Clone the repository
+### Environment Setup
+
+This repository uses **Pixi** to guarantee user-space isolated environments without requiring root privileges or pre-installed cluster software.
+
+#### 1. Install Pixi (*One-time setup*)
+
+If Pixi is not available on your (local or HPC login) node, install it locally:
+
+```bash
+curl -fsSL https://pixi.sh/install.sh | sh
+source ~/.bashrc
+```
+
+#### 2. Clone this repository
+
 Clone this project into your scratch or home space inside the cluster:
+
 ```bash
 git clone https://github.com/orviz/snakemake-wrf-compilation
 cd snakemake-wrf-compilation
 ```
 
-### 2. Configure system parameters
+#### 3. Project Initialization
+
+Pixi will automatically read `pixi.toml`, download the exact versions of Snakemake and EasyBuild locked in `pixi.lock`, and create an isolated local environment:
+
+```bash
+pixi install
+```
+### WRF installation
+
+#### 1. Configure system parameters
+
 Open the `config/config.yaml` file and adjust the variables to match your cluster architecture and desired WRF target version:
+
 ```yaml
 # config/config.yaml
 wrf_version: "4.4.1"
 toolchain: "foss-2022b"
 parallel_type: "dmpar"
-eb_software_root: "/home/user/.local/easybuild/software" # <- Your EasyBuild software root path
+eb_software_root: "/home/user/.local/easybuild/software" # Your EasyBuild software root path
 ```
 
-### 3. Run the installation pipeline
+#### 2. Run the installation pipeline
 
-#### Local execution
-Execute Snakemake from the root directory of the repository. Specify the number of CPU cores you want to allocate for parallel compilation:
+Use the pre-configured Pixi tasks to run the workflow through Slurm:
+
+* **To run locally (useful for HPC interactive nodes, debugging):**
 ```bash
-snakemake --cores 16
+pixi run run-local --cores 8
 ```
 
-#### Slurm HPC execution
-As a general rule use `--dry-run` for first-time validation:
+* **To run a dry-run validation:**
 ```bash
-snakemake --profile config/profiles/slurm_cluster --dry-run --reason --quiet
+pixi run dry-run
+```
+
+* **To launch the production build on the Slurm queues:**
+```bash
+pixi run run-slurm
 ```
 
 ---

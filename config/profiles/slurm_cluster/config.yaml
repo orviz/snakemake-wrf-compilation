@@ -1,5 +1,3 @@
-# config/profiles/slurm_cluster/config.yaml
-
 # Slurm native executor
 executor: slurm
 
