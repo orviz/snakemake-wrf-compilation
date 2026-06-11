@@ -60,11 +60,15 @@ rule wrf_core_libraries_checkpoint:
     log:
         "logs/wrf_phase3_build_core.log"
     threads: 16  # Reserve these cores in Slurm for the compilation step
+    resources:
+        """
+        Global default estimates independent from the HPC node
+        """
+        mem_mb = 32768,
+        runtime = 240
     shell:
-        """
         # Launch the heavy compilation of the core libraries of WRF
-        eb WRF-{VERSION}-{TOOLCHAIN}-{PARALLEL}.eb --robot --stop=build > {log} 2>&1
-        """
+        eb WRF-{VERSION}-{TOOLCHAIN}-{PARALLEL}.eb --robot --stop=build --parallel={threads} > {log} 2>&1
 
 # -----------------------------------------------------------------------------
 # PHASE 4: Generation of Executables and Finalization
@@ -82,11 +86,13 @@ rule wrf_finalize_installation:
         final_flag = f"logs/installation_WRF_{VERSION}.done"
     log:
         "logs/wrf_phase4_final.log"
+    threads: 16
+    resources:
+        mem_mb = 32768,
+        runtime = 60
     shell:
-        """
         # Final execution of EasyBuild (will complete the installation and sanity checks)
-        eb WRF-{VERSION}-{TOOLCHAIN}-{PARALLEL}.eb --robot > {log} 2>&1
+        eb WRF-{VERSION}-{TOOLCHAIN}-{PARALLEL}.eb --robot --parallel={threads} > {log} 2>&1
         
         # Final flag file for the pipeline
         touch {output.final_flag}
-        """

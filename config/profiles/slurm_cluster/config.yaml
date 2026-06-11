@@ -1,0 +1,23 @@
+# config/profiles/slurm_cluster/config.yaml
+
+# Slurm native executor
+executor: slurm
+
+# Default resources for all rules, can be overridden by specific rules
+default-resources:
+  slurm_partition: "normal"     # Slurm partition ID
+  runtime: 60 
+  mem_mb: 4096
+
+# Specific configuration for the WRF heavy lifting rule
+set-resources:
+  wrf_core_libraries_checkpoint:
+    slurm_partition: "computo"
+    runtime: 240
+    mem_mb: 32768
+
+# Workflow parameters
+restart-times: 1                # Retry once on failure
+max-jobs-per-second: 2
+max-status-checks-per-second: 10
+local-cores: 1                  # Local tasks (on login node) will use 1 core

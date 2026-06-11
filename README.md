@@ -52,9 +52,17 @@ eb_software_root: "/home/user/.local/easybuild/software" # <- Your EasyBuild sof
 ```
 
 ### 3. Run the installation pipeline
+
+#### Local execution
 Execute Snakemake from the root directory of the repository. Specify the number of CPU cores you want to allocate for parallel compilation:
 ```bash
 snakemake --cores 16
+```
+
+#### Slurm HPC execution
+As a general rule use `--dry-run` for first-time validation:
+```bash
+snakemake --profile config/profiles/slurm_cluster --dry-run --reason --quiet
 ```
 
 ---
