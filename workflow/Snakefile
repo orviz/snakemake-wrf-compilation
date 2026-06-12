@@ -19,13 +19,12 @@ rule all:
 rule wrf_source_checkpoint:
     """Verifies that the source code is available in the directory."""
     output:
-        # The 'configure' script is the indicator that the base code is ready
         config_script = os.path.join(WRF_SRC_DIR, "configure")
     log:
         "logs/wrf_phase1_fetch.log"
     shell:
-        # HPC command to download/extract the source code
-        eb WRF-{VERSION}-{TOOLCHAIN}-{PARALLEL}.eb --robot --stop=fetch > {log} 2>&1
+        "eb WRF-{config[wrf_version]}-{config[toolchain]}-{config[parallel_type]}.eb "
+        "--robot --stop=fetch > {log} 2>&1"
 
 # -----------------------------------------------------------------------------
 # PHASE 2: Environment Configuration for Compilation
@@ -35,13 +34,12 @@ rule wrf_configure_checkpoint:
     input:
         config_script = os.path.join(WRF_SRC_DIR, "configure")
     output:
-        # File that generates WRF strictly upon completion of ./configure
         make_config = os.path.join(WRF_SRC_DIR, "configure.wrf")
     log:
         "logs/wrf_phase2_configure.log"
     shell:
-        # Avanza el instalador hasta generar la configuración del Makefile
-        eb WRF-{VERSION}-{TOOLCHAIN}-{PARALLEL}.eb --robot --stop=configure > {log} 2>&1
+        "eb WRF-{config[wrf_version]}-{config[toolchain]}-{config[parallel_type]}.eb "
+        "--robot --stop=configure > {log} 2>&1"
 
 # -----------------------------------------------------------------------------
 # PHASE 3: Core libraries compilation
@@ -51,18 +49,16 @@ rule wrf_core_libraries_checkpoint:
     input:
         make_config = os.path.join(WRF_SRC_DIR, "configure.wrf")
     output:
-        # Static intermediate library generated before the executables
         main_lib = os.path.join(WRF_SRC_DIR, "main", "libwrflib.a")
     log:
         "logs/wrf_phase3_build_core.log"
-    threads: 16  # Reserve these cores in Slurm for the compilation step
+    threads: 16
     resources:
-        # Global default estimates independent from the HPC node
         mem_mb = 32768,
         runtime = 240
     shell:
-        # Launch the heavy compilation of the core libraries of WRF
-        eb WRF-{VERSION}-{TOOLCHAIN}-{PARALLEL}.eb --robot --stop=build --parallel={threads} > {log} 2>&1
+        "eb WRF-{config[wrf_version]}-{config[toolchain]}-{config[parallel_type]}.eb "
+        "--robot --stop=build --parallel={threads} > {log} 2>&1"
 
 # -----------------------------------------------------------------------------
 # PHASE 4: Generation of Executables and Finalization
@@ -72,7 +68,6 @@ rule wrf_finalize_installation:
     input:
         main_lib = os.path.join(WRF_SRC_DIR, "main", "libwrflib.a")
     output:
-        # The 4 critical binaries that guarantee the success of the WRF compilation
         wrf_exe = os.path.join(WRF_SRC_DIR, "main", "wrf.exe"),
         real_exe = os.path.join(WRF_SRC_DIR, "main", "real.exe"),
         ndown_exe = os.path.join(WRF_SRC_DIR, "main", "ndown.exe"),
@@ -85,8 +80,7 @@ rule wrf_finalize_installation:
         mem_mb = 32768,
         runtime = 60
     shell:
-        # Final execution of EasyBuild (will complete the installation and sanity checks)
-        eb WRF-{VERSION}-{TOOLCHAIN}-{PARALLEL}.eb --robot --parallel={threads} > {log} 2>&1
-        
-        # Final flag file for the pipeline
+        """
+        eb WRF-{config[wrf_version]}-{config[toolchain]}-{config[parallel_type]}.eb --robot --parallel={threads} > {log} 2>&1
         touch {output.final_flag}
+        """
