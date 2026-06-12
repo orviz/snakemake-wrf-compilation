@@ -2,15 +2,15 @@
 
 This directory contains the infrastructure configuration files required to map the generic WRF installation pipeline to your local High-Performance Computing (HPC) cluster resources.
 
-To ensure portability, this workflow decouples **abstract job requirements**, defined inside `workflow/Snakefile`, from **HPC-specific cluster flags**, defined here in the Slurm profile.
+To ensure portability, this workflow decouples **abstract job requirements**, defined inside `workflow/Snakefile`, from **HPC-specific cluster flags**, defined here in the Slurm profile templates.
 
 ---
 
 ## Slurm Parameter Discovery (step-by-step)
 
-Before launching the pipeline on a new cluster, you must discover your local partition names, account billings, and permissions. Run the following commands on your cluster's **login node** to extract the values needed for `config/profiles/slurm_cluster/config.yaml`. 
+Before launching the pipeline on a new cluster, you must discover your local partition names, account billings, and permissions. Run the following commands on your cluster's **login node** to extract the values needed for your customized `config.yaml` profile.
 
-Note that, depending on the HPC site policies, some Slurm commands might not be available. In that case you will need to find out alternative ways to obtain the required info.
+Note that, depending on the HPC site policies, some Slurm commands might be restricted. In that case, you will need to find alternative ways to obtain the required info.
 
 ### 1. Identify Your Authorized Partition (`slurm_partition`)
 To discover which queues/partitions you are allowed to submit jobs to, execute:
@@ -28,14 +28,24 @@ Most institutional clusters require a project allocation string to track CPU-hou
 ```bash
 sacctmgr -p show associations user=\$USER format=Account | grep -v "Account"
 ```
-* **Action**: Copy your target project group name (e.g., `computacion`, `physics_dept`) into the `slurm_account` field. 
+* **Action**: Copy your target project group name (e.g., `computacion`, `physics_dept`) into the `slurm_account` field.
 * **Note**: If your cluster configuration does not require accounting flags, you can completely delete the `slurm_account` line from the `.yaml` profile.
 
 ---
 
-## Profile Customization File (`profiles/slurm_cluster/config.yaml`)
+## Profile Customization Deployment
 
-Open `profiles/slurm_cluster/config.yaml` and update it using your discovered cluster credentials. Keep the overall configuration structure intact to preserve Snakemake executor integrations:
+To configure your specific cluster, **never edit the template folder directly**. Follow these deployment steps from the repository root directory:
+
+### Step 1: Copy the base template
+Duplicate the base Slurm configuration template into a custom folder named after your cluster (e.g., `altamira_cluster`):
+```bash
+cp -r config/profiles/template_slurm config/profiles/altamira_cluster
+```
+*Note: Any custom profile folder created here is automatically ignored by Git to protect your private billing and infrastructure metadata.*
+
+### Step 2: Edit your profile
+Open `config/profiles/altamira_cluster/config.yaml` and update it using your discovered cluster credentials. Keep the overall configuration structure intact to preserve Snakemake executor integrations:
 
 ```yaml
 # Target execution framework
@@ -63,10 +73,10 @@ local-cores: 1                  # Keeps file tracking tasks on a single login no
 
 ## Validation Checklist
 
-After editing the configuration values according to your cluster specifications, **always perform a first non-invasive validation run** from the repository's root path:
+After editing the configuration values according to your cluster specifications, **always perform a first non-invasive validation run** from the repository's root path by appending your custom profile path to the Pixi task:
 
 ```bash
-pixi run dry-run
+pixi run dry-run config/profiles/altamira_cluster
 ```
 
-Ensure the dry-run output correctly parses your partition names and maps.
+Ensure the dry-run output correctly parses your partition names and maps the resource requirements (`threads: 16`, `mem_mb: 32768`) to the heavy-lifting compilation rules without triggering syntax errors.

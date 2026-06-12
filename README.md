@@ -23,9 +23,12 @@ This repository strictly complies with the official **Snakemake Workflow Standar
 ```text
 wrf-installation-pipeline/
 ├── .gitignore               # Excludes logs and temporary Snakemake directories
-├── README.md                # This usage guide
 ├── config/
-│   └── config.yaml          # System environment, toolchain, and software path variables
+│   └── config.yaml          # Target WRF version, toolchain, and software paths
+│   ├── README.md            # Slurm discovery command documentation guide
+│   └── profiles/
+│       └── template_slurm/  # Base template configuration for any HPC cluster
+│           └── config.yaml
 └── workflow/
     └── Snakefile            # DAG workflow with granular physical WRF checkpoints
 ```
@@ -63,7 +66,7 @@ Pixi will automatically read `pixi.toml`, download the exact versions of Snakema
 ```bash
 pixi install
 ```
-### WRF installation
+### WRF installation workflow
 
 #### 1. Configure system parameters
 
@@ -77,25 +80,34 @@ parallel_type: "dmpar"
 eb_software_root: "/home/user/.local/easybuild/software" # Your EasyBuild software root path
 ```
 
-#### 2. Run the installation pipeline
+### 2. Create your private Slurm profile from the template
+To prevent Git from tracking your private billing accounts or center-specific partitions, copy the default template into a custom cluster profile folder:
+```bash
+cp -r config/profiles/template_slurm config/profiles/my_cluster
+```
+*Note: Any folder created under `config/profiles/` except `template_slurm` is automatically blacklisted by `.gitignore`.*
+
+Open `config/profiles/my_cluster/config.yaml` and update the placeholders
+
+#### 3. Run the non-invasive Dry-Run check
+Verify the Slurm resource routing and the WRF dependency graph before sending jobs to the queues:
+```bash
+pixi run dry-run config/profiles/my_cluster
+```
+
+#### 4. Run Production Workflows
 
 Use the pre-configured Pixi tasks to run the workflow through Slurm:
+
+* **To submit jobs automatically through the Slurm queue manager using your custom profile:**
+```bash
+pixi run run-slurm config/profiles/my_cluster
+```
 
 * **To run locally (useful for HPC interactive nodes, debugging):**
 ```bash
 pixi run run-local --cores 8
 ```
-
-* **To run a dry-run validation:**
-```bash
-pixi run dry-run
-```
-
-* **To launch the production build on the Slurm queues:**
-```bash
-pixi run run-slurm
-```
-
 ---
 
 ## Compilation Phases

@@ -20,6 +20,9 @@ easybuild-easyblocks = "*"
 easybuild-easyconfigs = "*"
 
 [tasks]
-dry-run = "snakemake --profile config/profiles/slurm_cluster --dry-run"
-run-slurm = "snakemake --profile config/profiles/slurm_cluster"
+# Default local task (accepts arguments, e.g.: pixi run run-local --cores 8)
 run-local = "snakemake"
+
+# Slurm profile-based tasks
+dry-run   = "snakemake --dry-run --profile"
+run-slurm = "snakemake --profile"
